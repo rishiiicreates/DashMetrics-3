@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
@@ -11,6 +11,8 @@ import { SocialMediaConnector } from "@/components/SocialMediaConnector";
 import { SocialMediaMetrics } from "@/components/SocialMediaMetrics";
 import { Activity, SavedContent } from "@shared/schema";
 import { UserPlus, MessageSquare, FileText, Clock } from "lucide-react";
+import { useSocialConnections } from "@/hooks/useSocialConnections";
+import { SocialPlatform } from "@/lib/socialAuth";
 
 // Animation variants
 const containerVariants = {
@@ -38,6 +40,9 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
+  // Get connected accounts and their metrics
+  const { platforms, metrics, fetchMetrics } = useSocialConnections();
+  
   // Get analytics data
   const { data: analyticsData, isLoading: isLoadingAnalytics } = useQuery({
     queryKey: ["/api/analytics"],
@@ -53,23 +58,109 @@ export default function Dashboard() {
     queryKey: ["/api/content/top"],
   });
   
-  // Prepare growth chart data
-  const audienceGrowthData = [
-    { name: "Mon", instagram: 2500, twitter: 1800, linkedin: 1200 },
-    { name: "Tue", instagram: 3500, twitter: 2100, linkedin: 1400 },
-    { name: "Wed", instagram: 3100, twitter: 1900, linkedin: 1300 },
-    { name: "Thu", instagram: 4200, twitter: 2400, linkedin: 1700 },
-    { name: "Fri", instagram: 4000, twitter: 2300, linkedin: 1600 },
-    { name: "Sat", instagram: 4800, twitter: 2700, linkedin: 1900 },
-    { name: "Sun", instagram: 5500, twitter: 3200, linkedin: 2200 },
-  ];
+  // Fetch metrics for all connected platforms on load and when connections change
+  useEffect(() => {
+    Object.entries(platforms).forEach(([platform, state]) => {
+      if (state.connected && state.username) {
+        fetchMetrics(platform as SocialPlatform).catch(console.error);
+      }
+    });
+  }, [platforms, fetchMetrics]);
   
-  // Prepare engagement chart data
-  const engagementData = [
-    { name: "Likes", value: 42, color: "hsl(222.2 84.5% 63.3%)", percentage: "42%" },
-    { name: "Comments", value: 31, color: "#11CDEF", percentage: "31%" },
-    { name: "Shares", value: 27, color: "#FB6340", percentage: "27%" },
-  ];
+  // Calculate total followers across all platforms
+  const totalFollowers = useMemo(() => {
+    return Object.values(metrics)
+      .filter(m => m !== null)
+      .reduce((sum, m) => sum + m.followers, 0);
+  }, [metrics]);
+  
+  // Calculate average engagement rate
+  const averageEngagement = useMemo(() => {
+    const engagements = Object.values(metrics)
+      .filter(m => m !== null)
+      .map(m => m.engagement);
+      
+    if (engagements.length === 0) return 0;
+    const average = engagements.reduce((sum, val) => sum + val, 0) / engagements.length;
+    return average;
+  }, [metrics]);
+  
+  // Calculate total posts across all platforms
+  const totalPosts = useMemo(() => {
+    return Object.values(metrics)
+      .filter(m => m !== null)
+      .reduce((sum, m) => sum + m.totalPosts, 0);
+  }, [metrics]);
+  
+  // Prepare growth chart data from connected accounts
+  const audienceGrowthData = useMemo(() => {
+    // Start with default days
+    const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    
+    // Get connected platforms for chart
+    const connectedPlatforms = Object.entries(platforms)
+      .filter(([_, state]) => state.connected)
+      .map(([platform]) => platform);
+      
+    // Create the data structure needed for the chart
+    return daysOfWeek.map((day, index) => {
+      // Create a data point for each day with the connected platforms
+      const dataPoint: any = { name: day };
+      
+      // For each connected platform, add mock data based on metrics
+      connectedPlatforms.forEach(platform => {
+        const platformMetrics = metrics[platform as SocialPlatform];
+        if (platformMetrics) {
+          // Use the user's real follower count and generate daily data around it
+          const baseValue = platformMetrics.followers / 7; // divide by days of week
+          // Make it fluctuate a bit for a natural chart
+          const factor = 0.9 + (index / 10) + (Math.random() * 0.3);
+          dataPoint[platform] = Math.round(baseValue * factor);
+        }
+      });
+      
+      return dataPoint;
+    });
+  }, [platforms, metrics]);
+  
+  // Prepare engagement chart data from connected accounts
+  const engagementData = useMemo(() => {
+    // Aggregated engagement metrics across platforms
+    let totalLikes = 0;
+    let totalComments = 0;
+    let totalShares = 0;
+    
+    // Sum up all the metrics from connected platforms
+    Object.values(metrics)
+      .filter(m => m !== null)
+      .forEach(m => {
+        totalLikes += m.likes || 0;
+        totalComments += m.comments || 0;
+        totalShares += m.shares || 0;
+      });
+      
+    const total = totalLikes + totalComments + totalShares;
+    
+    // If no data yet, return empty values
+    if (total === 0) {
+      return [
+        { name: "Likes", value: 0, color: "hsl(222.2 84.5% 63.3%)", percentage: "0%" },
+        { name: "Comments", value: 0, color: "#11CDEF", percentage: "0%" },
+        { name: "Shares", value: 0, color: "#FB6340", percentage: "0%" },
+      ];
+    }
+    
+    // Calculate percentages
+    const likesPercent = Math.round((totalLikes / total) * 100);
+    const commentsPercent = Math.round((totalComments / total) * 100);
+    const sharesPercent = Math.round((totalShares / total) * 100);
+    
+    return [
+      { name: "Likes", value: likesPercent, color: "hsl(222.2 84.5% 63.3%)", percentage: `${likesPercent}%` },
+      { name: "Comments", value: commentsPercent, color: "#11CDEF", percentage: `${commentsPercent}%` },
+      { name: "Shares", value: sharesPercent, color: "#FB6340", percentage: `${sharesPercent}%` },
+    ];
+  }, [metrics]);
   
   // Mocked activities data (would come from API)
   const activities: Activity[] = [
@@ -79,7 +170,7 @@ export default function Dashboard() {
       type: "follower",
       message: "23 new followers joined across your social accounts",
       icon: "user-add",
-      timestamp: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+      timestamp: new Date(Date.now() - 7200000), // 2 hours ago
     },
     {
       id: 2,
@@ -87,7 +178,7 @@ export default function Dashboard() {
       type: "comment",
       message: "New comments on your post \"Launch Announcement\"",
       icon: "chat",
-      timestamp: new Date(Date.now() - 14400000).toISOString(), // 4 hours ago
+      timestamp: new Date(Date.now() - 14400000), // 4 hours ago
     },
     {
       id: 3,
@@ -95,7 +186,7 @@ export default function Dashboard() {
       type: "campaign",
       message: "Campaign completed \"Q3 Product Update\" reached 14,593 people",
       icon: "rocket",
-      timestamp: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+      timestamp: new Date(Date.now() - 86400000), // Yesterday
     },
     {
       id: 4,
@@ -103,7 +194,7 @@ export default function Dashboard() {
       type: "bookmark",
       message: "You saved \"Content Strategy 2023\" to favorites",
       icon: "bookmark",
-      timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+      timestamp: new Date(Date.now() - 172800000), // 2 days ago
     },
   ];
   
@@ -119,7 +210,7 @@ export default function Dashboard() {
       likes: 2400,
       comments: 89,
       shares: 324,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     },
     {
       id: 2,
@@ -131,7 +222,7 @@ export default function Dashboard() {
       likes: 1800,
       comments: 63,
       shares: 215,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     },
     {
       id: 3,
@@ -143,7 +234,7 @@ export default function Dashboard() {
       likes: 1500,
       comments: 42,
       shares: 187,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date(),
     },
   ];
   
@@ -177,8 +268,11 @@ export default function Dashboard() {
             >
               <StatCard
                 title="Total Followers"
-                value="12,483"
-                change={{ value: "8.2%", isPositive: true }}
+                value={totalFollowers.toLocaleString()}
+                change={{ 
+                  value: "8.2%", // In a real app, we would calculate growth over time
+                  isPositive: true 
+                }}
                 icon={UserPlus}
                 iconColor="primary"
               />
@@ -190,8 +284,11 @@ export default function Dashboard() {
             >
               <StatCard
                 title="Engagement Rate"
-                value="4.6%"
-                change={{ value: "1.2%", isPositive: false }}
+                value={`${(averageEngagement * 100).toFixed(1)}%`}
+                change={{ 
+                  value: "1.2%", 
+                  isPositive: averageEngagement > 0.04 // 4% is considered good
+                }}
                 icon={MessageSquare}
                 iconColor="secondary"
               />
@@ -203,8 +300,11 @@ export default function Dashboard() {
             >
               <StatCard
                 title="Total Posts"
-                value="342"
-                change={{ value: "12.3%", isPositive: true }}
+                value={totalPosts.toLocaleString()}
+                change={{ 
+                  value: "12.3%",
+                  isPositive: true 
+                }}
                 icon={FileText}
                 iconColor="accent"
               />
@@ -215,9 +315,12 @@ export default function Dashboard() {
               whileHover={{ y: -5, transition: { duration: 0.2 } }}
             >
               <StatCard
-                title="Avg. Response Time"
-                value="2.4 hrs"
-                change={{ value: "5.1%", isPositive: true }}
+                title="Connected Accounts"
+                value={Object.values(platforms).filter(p => p.connected).length.toString()}
+                change={{ 
+                  value: `${Object.values(platforms).filter(p => p.connected).length}/4`,
+                  isPositive: Object.values(platforms).filter(p => p.connected).length > 0
+                }}
                 icon={Clock}
                 iconColor="warning"
               />
@@ -253,7 +356,7 @@ export default function Dashboard() {
             >
               <EngagementChart 
                 data={engagementData} 
-                average="4.6%" 
+                average={`${(averageEngagement * 100).toFixed(1)}%`}
                 isLoading={isLoadingAnalytics} 
               />
             </motion.div>

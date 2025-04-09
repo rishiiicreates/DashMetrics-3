@@ -8,9 +8,18 @@ import { cn } from "@/lib/utils";
 import { 
   LayoutDashboard, Bookmark, History, Bell, Settings, 
   LogOut, ChevronLeft, ChevronRight, 
-  User as UserIcon
+  User as UserIcon, PlusCircle, Instagram, Twitter, Youtube, Facebook
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  SocialPlatform, 
+  isSocialPlatformConnected, 
+  getSocialAuthState 
+} from "@/lib/socialAuth";
+import { useSocialConnections } from "@/hooks/useSocialConnections";
+import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SocialAccountLogin } from "@/components/SocialAccountLogin";
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -53,11 +62,142 @@ const SidebarItem = ({
   );
 };
 
+// Get the social platform icon
+const getPlatformIcon = (platform: SocialPlatform): JSX.Element => {
+  switch (platform) {
+    case 'instagram':
+      return <Instagram />;
+    case 'twitter':
+      return <Twitter />;
+    case 'youtube':
+      return <Youtube />;
+    case 'facebook':
+      return <Facebook />;
+    default:
+      return <UserIcon />;
+  }
+};
+
+// Get platform color
+const getPlatformColor = (platform: SocialPlatform): string => {
+  switch (platform) {
+    case 'instagram':
+      return 'text-pink-500';
+    case 'twitter':
+      return 'text-blue-400';
+    case 'youtube':
+      return 'text-red-500';
+    case 'facebook':
+      return 'text-blue-600';
+    default:
+      return 'text-gray-500';
+  }
+};
+
+interface SocialAccountProps {
+  platform: SocialPlatform;
+  username?: string;
+  connected: boolean;
+  collapsed: boolean;
+  onLogin: (platform: SocialPlatform) => void;
+}
+
+const SocialAccount = ({ 
+  platform, 
+  username, 
+  connected, 
+  collapsed,
+  onLogin
+}: SocialAccountProps) => {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button 
+            onClick={() => onLogin(platform)}
+            className={cn(
+              "flex items-center space-x-3 px-3 py-2 rounded-md transition-colors w-full",
+              connected 
+                ? "hover:bg-gray-100 dark:hover:bg-gray-800" 
+                : "opacity-50 hover:opacity-80"
+            )}
+          >
+            <div className={cn("text-xl", getPlatformColor(platform))}>
+              {getPlatformIcon(platform)}
+            </div>
+            {!collapsed && (
+              <>
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-gray-800 dark:text-white truncate">
+                    {connected ? username || platform : `Connect ${platform}`}
+                  </p>
+                  {connected && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                    </p>
+                  )}
+                </div>
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  connected ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                )}></div>
+              </>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {connected 
+            ? `Logged in as ${username || platform}` 
+            : `Connect ${platform} account`}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 export function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const [collapsed, setCollapsed] = useState(false);
+  const { 
+    platforms, 
+    metrics,
+    connectPlatform, 
+    loginWithCredentials, 
+    fetchMetrics,
+    isLoggingIn
+  } = useSocialConnections();
+  const [showLoginModal, setShowLoginModal] = useState<SocialPlatform | null>(null);
+  
+  const handleSocialLogin = (platform: SocialPlatform) => {
+    // If already connected, show platform-specific data or allow sign in with different account
+    if (platforms[platform].connected) {
+      setShowLoginModal(platform);
+    } else {
+      // Show login modal for the platform
+      setShowLoginModal(platform);
+    }
+  };
+  
+  const handleCredentialsLogin = async (platform: SocialPlatform, username: string, password: string) => {
+    try {
+      await loginWithCredentials(platform, username, password);
+      setShowLoginModal(null);
+      toast({
+        title: "Connected successfully",
+        description: `Your ${platform} account has been connected and data is being fetched.`
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    }
+  };
   
   const handleLogout = async () => {
     try {
@@ -139,6 +279,39 @@ export function Sidebar() {
           active={location === "/settings"} 
           collapsed={collapsed}
         />
+        
+        {/* Connected Accounts Section - YouTube Studio style */}
+        <div className="mt-6">
+          {!collapsed && (
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">
+                Connected Accounts
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={() => handleSocialLogin(platforms.instagram.connected ? 'instagram' : 'youtube')}
+              >
+                <PlusCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </Button>
+            </div>
+          )}
+          {collapsed && <Separator className="my-4" />}
+          
+          <div className="space-y-1">
+            {Object.entries(platforms).map(([key, value]) => (
+              <SocialAccount
+                key={key}
+                platform={key as SocialPlatform}
+                username={value.username}
+                connected={value.connected}
+                collapsed={collapsed}
+                onLogin={handleSocialLogin}
+              />
+            ))}
+          </div>
+        </div>
       </nav>
       
       {/* User Profile */}
@@ -170,6 +343,14 @@ export function Sidebar() {
           </Button>
         </div>
       </div>
+      
+      {/* Social Account Login Modal */}
+      <SocialAccountLogin 
+        platform={showLoginModal}
+        open={showLoginModal !== null}
+        onClose={() => setShowLoginModal(null)}
+        onLogin={handleCredentialsLogin}
+      />
     </div>
   );
 }
