@@ -46,13 +46,35 @@ export default function Register() {
       });
       navigate("/");
     } catch (error) {
+      console.error("Registration error:", error);
+      
+      // Detailed error handling
+      let errorMessage = "Failed to create account. Please try again.";
+      
       if (error instanceof Error) {
-        toast({
-          title: "Registration failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        // Extract Firebase error code if available
+        const errorCode = (error as any).code;
+        
+        if (errorCode === "auth/email-already-in-use") {
+          errorMessage = "This email is already in use. Please log in or use a different email.";
+        } else if (errorCode === "auth/invalid-email") {
+          errorMessage = "Invalid email format. Please check your email address.";
+        } else if (errorCode === "auth/weak-password") {
+          errorMessage = "Password is too weak. Please use a stronger password.";
+        } else if (errorCode === "auth/operation-not-allowed") {
+          errorMessage = "Email/password accounts are not enabled. Please contact support.";
+        } else if (errorCode === "auth/network-request-failed") {
+          errorMessage = "Network error. Please check your internet connection and try again.";
+        } else {
+          errorMessage = error.message || errorMessage;
+        }
       }
+      
+      toast({
+        title: "Registration failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -68,13 +90,35 @@ export default function Register() {
       });
       navigate("/");
     } catch (error) {
+      console.error("Google registration error:", error);
+      
+      // Detailed error handling
+      let errorMessage = "Failed to register with Google. Please try again.";
+      
       if (error instanceof Error) {
-        toast({
-          title: "Registration failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        // Extract Firebase error code if available
+        const errorCode = (error as any).code;
+        
+        if (errorCode === "auth/popup-blocked") {
+          errorMessage = "Popup was blocked by your browser. Please allow popups for this site.";
+        } else if (errorCode === "auth/cancelled-popup-request") {
+          errorMessage = "The authentication popup was closed before completing the sign-in.";
+        } else if (errorCode === "auth/invalid-credential") {
+          errorMessage = "The authentication credential is invalid. Please try again.";
+        } else if (errorCode === "auth/unauthorized-domain") {
+          errorMessage = "This domain is not authorized for OAuth operations. Contact support.";
+        } else if (errorCode === "auth/account-exists-with-different-credential") {
+          errorMessage = "An account already exists with the same email address but different sign-in credentials. Please sign in using the original method.";
+        } else {
+          errorMessage = error.message || errorMessage;
+        }
       }
+      
+      toast({
+        title: "Registration failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -83,11 +127,21 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 bg-noise">
       <div className="w-full max-w-md">
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center mb-4">
           <div className="w-10 h-10 bg-primary rounded-md flex items-center justify-center mr-2">
             <BarChart2 className="text-white w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">DashMetrics</h1>
+        </div>
+        
+        {/* Development Guide - Remove in production */}
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-md p-3 mb-4 text-xs text-amber-800 dark:text-amber-200">
+          <h3 className="font-semibold">Firebase Setup:</h3>
+          <ol className="list-decimal pl-4 mt-1 space-y-1">
+            <li>Make sure you've enabled Email/Password authentication in Firebase Console.</li>
+            <li>Google authentication requires your domain in Firebase Console → Authentication → Sign-in method → Authorized domains.</li>
+            <li>Add your Replit domain (*.replit.dev) to the authorized domains.</li>
+          </ol>
         </div>
         
         <Card>

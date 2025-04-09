@@ -40,13 +40,35 @@ export default function Login() {
       });
       navigate("/");
     } catch (error) {
+      console.error("Email login error:", error);
+      
+      // Detailed error handling
+      let errorMessage = "Failed to sign in with email/password. Please try again.";
+      
       if (error instanceof Error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        // Extract Firebase error code if available
+        const errorCode = (error as any).code;
+        
+        if (errorCode === "auth/user-not-found") {
+          errorMessage = "No account found with this email address. Please check your email or register.";
+        } else if (errorCode === "auth/wrong-password") {
+          errorMessage = "Incorrect password. Please try again or reset your password.";
+        } else if (errorCode === "auth/invalid-credential") {
+          errorMessage = "Invalid login credentials. Please check your email and password.";
+        } else if (errorCode === "auth/too-many-requests") {
+          errorMessage = "Too many failed login attempts. Please try again later or reset your password.";
+        } else if (errorCode === "auth/user-disabled") {
+          errorMessage = "This account has been disabled. Please contact support.";
+        } else {
+          errorMessage = error.message || errorMessage;
+        }
       }
+      
+      toast({
+        title: "Login failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -62,13 +84,33 @@ export default function Login() {
       });
       navigate("/");
     } catch (error) {
+      console.error("Login error:", error);
+      
+      // Detailed error handling
+      let errorMessage = "Failed to sign in with Google. Please try again.";
+      
       if (error instanceof Error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        // Extract Firebase error code if available
+        const errorCode = (error as any).code;
+        
+        if (errorCode === "auth/popup-blocked") {
+          errorMessage = "Popup was blocked by your browser. Please allow popups for this site.";
+        } else if (errorCode === "auth/cancelled-popup-request") {
+          errorMessage = "The authentication popup was closed before completing the sign-in.";
+        } else if (errorCode === "auth/invalid-credential") {
+          errorMessage = "The authentication credential is invalid. Please try again.";
+        } else if (errorCode === "auth/unauthorized-domain") {
+          errorMessage = "This domain is not authorized for OAuth operations. Contact support.";
+        } else {
+          errorMessage = error.message || errorMessage;
+        }
       }
+      
+      toast({
+        title: "Login failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -77,11 +119,21 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 bg-noise">
       <div className="w-full max-w-md">
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center mb-4">
           <div className="w-10 h-10 bg-primary rounded-md flex items-center justify-center mr-2">
             <BarChart2 className="text-white w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">DashMetrics</h1>
+        </div>
+        
+        {/* Development Guide - Remove in production */}
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-md p-3 mb-4 text-xs text-amber-800 dark:text-amber-200">
+          <h3 className="font-semibold">Development Setup:</h3>
+          <ol className="list-decimal pl-4 mt-1 space-y-1">
+            <li>If using Google login, ensure your domain is authorized in the Firebase Console → Authentication → Sign-in method → Authorized domains.</li>
+            <li>Check that the Firebase config variables (API key, project ID, app ID) are correctly set.</li>
+            <li>For local testing, add "localhost" to authorized domains.</li>
+          </ol>
         </div>
         
         <Card>
