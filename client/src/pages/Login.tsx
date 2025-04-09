@@ -126,16 +126,6 @@ export default function Login() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">DashMetrics</h1>
         </div>
         
-        {/* Development Guide - Remove in production */}
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-md p-3 mb-4 text-xs text-amber-800 dark:text-amber-200">
-          <h3 className="font-semibold">Development Setup:</h3>
-          <ol className="list-decimal pl-4 mt-1 space-y-1">
-            <li>If using Google login, ensure your domain is authorized in the Firebase Console → Authentication → Sign-in method → Authorized domains.</li>
-            <li>Check that the Firebase config variables (API key, project ID, app ID) are correctly set.</li>
-            <li>For local testing, add "localhost" to authorized domains.</li>
-          </ol>
-        </div>
-        
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Welcome back</CardTitle>

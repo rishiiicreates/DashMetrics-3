@@ -134,16 +134,6 @@ export default function Register() {
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">DashMetrics</h1>
         </div>
         
-        {/* Development Guide - Remove in production */}
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-md p-3 mb-4 text-xs text-amber-800 dark:text-amber-200">
-          <h3 className="font-semibold">Firebase Setup:</h3>
-          <ol className="list-decimal pl-4 mt-1 space-y-1">
-            <li>Make sure you've enabled Email/Password authentication in Firebase Console.</li>
-            <li>Google authentication requires your domain in Firebase Console → Authentication → Sign-in method → Authorized domains.</li>
-            <li>Add your Replit domain (*.replit.dev) to the authorized domains.</li>
-          </ol>
-        </div>
-        
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Create an account</CardTitle>
