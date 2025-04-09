@@ -1,13 +1,41 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { AudienceGrowthChart } from "@/components/dashboard/AudienceGrowthChart";
 import { EngagementChart } from "@/components/dashboard/EngagementChart";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { TopContent } from "@/components/dashboard/TopContent";
+import { SocialMediaConnector } from "@/components/SocialMediaConnector";
+import { SocialMediaMetrics } from "@/components/SocialMediaMetrics";
 import { Activity, SavedContent } from "@shared/schema";
 import { UserPlus, MessageSquare, FileText, Clock } from "lucide-react";
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      when: "beforeChildren",
+      staggerChildren: 0.1,
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 25
+    }
+  }
+};
 
 export default function Dashboard() {
   // Get analytics data
@@ -124,64 +152,149 @@ export default function Dashboard() {
       title="Analytics Dashboard" 
       subtitle="Get insights on your social media performance"
     >
-      <div className="space-y-6">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-8"
+      >
+        {/* Social Media Connector */}
+        <motion.div variants={itemVariants} className="mb-8">
+          <SocialMediaConnector />
+        </motion.div>
+        
+        {/* Social Media Metrics */}
+        <motion.div variants={itemVariants}>
+          <SocialMediaMetrics />
+        </motion.div>
+        
         {/* Stats Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Total Followers"
-            value="12,483"
-            change={{ value: "8.2%", isPositive: true }}
-            icon={UserPlus}
-            iconColor="primary"
-          />
-          <StatCard
-            title="Engagement Rate"
-            value="4.6%"
-            change={{ value: "1.2%", isPositive: false }}
-            icon={MessageSquare}
-            iconColor="secondary"
-          />
-          <StatCard
-            title="Total Posts"
-            value="342"
-            change={{ value: "12.3%", isPositive: true }}
-            icon={FileText}
-            iconColor="accent"
-          />
-          <StatCard
-            title="Avg. Response Time"
-            value="2.4 hrs"
-            change={{ value: "5.1%", isPositive: true }}
-            icon={Clock}
-            iconColor="warning"
-          />
-        </div>
+        <motion.div variants={itemVariants}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            >
+              <StatCard
+                title="Total Followers"
+                value="12,483"
+                change={{ value: "8.2%", isPositive: true }}
+                icon={UserPlus}
+                iconColor="primary"
+              />
+            </motion.div>
+            
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            >
+              <StatCard
+                title="Engagement Rate"
+                value="4.6%"
+                change={{ value: "1.2%", isPositive: false }}
+                icon={MessageSquare}
+                iconColor="secondary"
+              />
+            </motion.div>
+            
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            >
+              <StatCard
+                title="Total Posts"
+                value="342"
+                change={{ value: "12.3%", isPositive: true }}
+                icon={FileText}
+                iconColor="accent"
+              />
+            </motion.div>
+            
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            >
+              <StatCard
+                title="Avg. Response Time"
+                value="2.4 hrs"
+                change={{ value: "5.1%", isPositive: true }}
+                icon={Clock}
+                iconColor="warning"
+              />
+            </motion.div>
+          </div>
+        </motion.div>
         
         {/* Chart Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <AudienceGrowthChart 
-            data={audienceGrowthData} 
-            isLoading={isLoadingAnalytics} 
-          />
-          <EngagementChart 
-            data={engagementData} 
-            average="4.6%" 
-            isLoading={isLoadingAnalytics} 
-          />
-        </div>
+        <motion.div variants={itemVariants}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ 
+                y: -5, 
+                boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
+                transition: { duration: 0.3 } 
+              }}
+              className="col-span-2"
+            >
+              <AudienceGrowthChart 
+                data={audienceGrowthData} 
+                isLoading={isLoadingAnalytics} 
+              />
+            </motion.div>
+            
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ 
+                y: -5, 
+                boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
+                transition: { duration: 0.3 } 
+              }}
+            >
+              <EngagementChart 
+                data={engagementData} 
+                average="4.6%" 
+                isLoading={isLoadingAnalytics} 
+              />
+            </motion.div>
+          </div>
+        </motion.div>
         
         {/* Recent Activity & Top Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ActivityFeed 
-            activities={activities} 
-            isLoading={isLoadingActivities} 
-          />
-          <TopContent 
-            content={topContent} 
-            isLoading={isLoadingTopContent} 
-          />
-        </div>
-      </div>
+        <motion.div variants={itemVariants}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ 
+                y: -5, 
+                boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
+                transition: { duration: 0.3 } 
+              }}
+              className="lg:col-span-1"
+            >
+              <ActivityFeed 
+                activities={activities} 
+                isLoading={isLoadingActivities} 
+              />
+            </motion.div>
+            
+            <motion.div 
+              variants={itemVariants}
+              whileHover={{ 
+                y: -5, 
+                boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
+                transition: { duration: 0.3 } 
+              }}
+              className="lg:col-span-2"
+            >
+              <TopContent 
+                content={topContent} 
+                isLoading={isLoadingTopContent} 
+              />
+            </motion.div>
+          </div>
+        </motion.div>
+      </motion.div>
     </DashboardLayout>
   );
 }
