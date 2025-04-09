@@ -18,7 +18,7 @@ interface UseSocialConnectionsResult {
   isFetchingMetrics: boolean;
   connectPlatform: (platform: SocialPlatform) => Promise<void>;
   disconnectPlatform: (platform: SocialPlatform) => Promise<void>;
-  loginWithCredentials: (platform: SocialPlatform, username: string, password: string) => Promise<SocialAuthState>;
+  loginWithCredentials: (platform: SocialPlatform, username?: string, password?: string) => Promise<SocialAuthState>;
   fetchMetrics: (platform: SocialPlatform) => Promise<void>;
   connectedCount: number;
   refreshConnections: () => void;
@@ -83,15 +83,22 @@ export function useSocialConnections(): UseSocialConnectionsResult {
     }
   }, [refreshConnections]);
   
-  // Login to a social platform with username/password
+  // Login to a social platform with username/password or via app
   const loginWithCredentials = useCallback(async (
     platform: SocialPlatform, 
-    username: string, 
-    password: string
+    username?: string, 
+    password?: string
   ) => {
     try {
       setIsLoggingIn(true);
-      const authState = await loginToSocialPlatform(platform, { username, password });
+      
+      // Call loginToSocialPlatform with optional credentials
+      // If username/password are empty, it will try to use app-based login
+      let credentials;
+      if (username && password) {
+        credentials = { username, password };
+      }
+      const authState = await loginToSocialPlatform(platform, credentials as any);
       
       // Update platforms state with new auth state
       setPlatforms(prev => ({
@@ -101,7 +108,9 @@ export function useSocialConnections(): UseSocialConnectionsResult {
       
       // Automatically fetch metrics for the newly logged in account
       try {
-        const platformMetrics = await getSocialPlatformMetrics(platform, username);
+        // Use the username that was returned from the auth state (might be generated for app login)
+        const userForMetrics = authState.username || '';
+        const platformMetrics = await getSocialPlatformMetrics(platform, userForMetrics);
         setMetrics(prev => ({
           ...prev,
           [platform]: platformMetrics

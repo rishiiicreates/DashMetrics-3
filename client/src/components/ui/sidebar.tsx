@@ -100,6 +100,7 @@ interface SocialAccountProps {
   connected: boolean;
   collapsed: boolean;
   onLogin: (platform: SocialPlatform) => void;
+  connectedVia?: 'app' | 'manual' | 'oauth';
 }
 
 const SocialAccount = ({ 
@@ -107,8 +108,26 @@ const SocialAccount = ({
   username, 
   connected, 
   collapsed,
-  onLogin
+  onLogin,
+  connectedVia
 }: SocialAccountProps) => {
+  
+  // Helper function to get connection method text
+  const getConnectionMethodText = () => {
+    if (!connected) return '';
+    
+    switch (connectedVia) {
+      case 'app':
+        return '• Connected via app';
+      case 'manual':
+        return '• Manual login';
+      case 'oauth':
+        return '• OAuth connected';
+      default:
+        return '';
+    }
+  };
+  
   return (
     <TooltipProvider>
       <Tooltip>
@@ -133,13 +152,13 @@ const SocialAccount = ({
                   </p>
                   {connected && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                      {platform.charAt(0).toUpperCase() + platform.slice(1)} {getConnectionMethodText()}
                     </p>
                   )}
                 </div>
                 <div className={cn(
                   "w-2 h-2 rounded-full",
-                  connected ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
+                  connected ? (connectedVia === 'app' ? "bg-blue-500" : "bg-green-500") : "bg-gray-300 dark:bg-gray-600"
                 )}></div>
               </>
             )}
@@ -147,7 +166,7 @@ const SocialAccount = ({
         </TooltipTrigger>
         <TooltipContent>
           {connected 
-            ? `Logged in as ${username || platform}` 
+            ? `Logged in as ${username || platform}${connectedVia === 'app' ? ' (via app)' : ''}`
             : `Connect ${platform} account`}
         </TooltipContent>
       </Tooltip>
@@ -170,13 +189,47 @@ export function Sidebar() {
   } = useSocialConnections();
   const [showLoginModal, setShowLoginModal] = useState<SocialPlatform | null>(null);
   
-  const handleSocialLogin = (platform: SocialPlatform) => {
+  const handleSocialLogin = async (platform: SocialPlatform) => {
     // If already connected, show platform-specific data or allow sign in with different account
     if (platforms[platform].connected) {
       setShowLoginModal(platform);
-    } else {
-      // Show login modal for the platform
-      setShowLoginModal(platform);
+      return;
+    }
+    
+    try {
+      // Try app-based login first (will automatically detect if app is installed)
+      toast({
+        title: "Checking for app...",
+        description: `Looking for ${platform} app on your device...`,
+      });
+      
+      // Try to login directly with the app if available - pass undefined for username and password
+      // The service will automatically detect the app and use it
+      const authState = await loginWithCredentials(platform);
+      
+      toast({
+        title: "Connected successfully",
+        description: `${platform} app detected and connected automatically!`,
+      });
+      
+      // If we get here, app login was successful
+    } catch (error) {
+      // If app login fails, show the manual login modal
+      if (error instanceof Error) {
+        if (error.message.includes('app not detected')) {
+          toast({
+            title: "Manual login required",
+            description: `Please enter your ${platform} credentials to connect.`,
+          });
+          setShowLoginModal(platform);
+        } else {
+          toast({
+            title: "Connection failed",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
+      }
     }
   };
   
@@ -291,7 +344,21 @@ export function Sidebar() {
                 variant="ghost" 
                 size="icon" 
                 className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-                onClick={() => handleSocialLogin(platforms.instagram.connected ? 'instagram' : 'youtube')}
+                onClick={() => {
+                  // Find the first disconnected platform to connect
+                  const disconnectedPlatforms = Object.entries(platforms)
+                    .filter(([_, value]) => !value.connected)
+                    .map(([key, _]) => key as SocialPlatform);
+                  
+                  if (disconnectedPlatforms.length > 0) {
+                    handleSocialLogin(disconnectedPlatforms[0]);
+                  } else {
+                    toast({
+                      title: "All platforms connected",
+                      description: "You've already connected all social media platforms."
+                    });
+                  }
+                }}
               >
                 <PlusCircle className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </Button>
@@ -306,6 +373,7 @@ export function Sidebar() {
                 platform={key as SocialPlatform}
                 username={value.username}
                 connected={value.connected}
+                connectedVia={value.connectedVia}
                 collapsed={collapsed}
                 onLogin={handleSocialLogin}
               />

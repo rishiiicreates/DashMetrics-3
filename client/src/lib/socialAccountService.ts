@@ -5,41 +5,111 @@ interface SocialCredentials {
   password: string;
 }
 
-// This function handles login to social media platforms 
+// Check if a social media app is installed on the device
+export async function checkAppInstalled(platform: SocialPlatform): Promise<boolean> {
+  try {
+    if (navigator.userAgent.includes('Mobile')) {
+      // On mobile devices, we would normally use deep links or Universal Links/App Links
+      // For now, simulate that apps are installed based on platform and random chance
+      
+      // Let's simulate having a 70% chance that the app is installed
+      const isInstalled = Math.random() < 0.7;
+      
+      console.log(`[Device Check] ${platform} app installed: ${isInstalled}`);
+      return isInstalled;
+    } else {
+      // On desktop, we might check for browser extensions or just move directly to OAuth
+      // For demo, let's assume desktop users have browser access to the platform
+      console.log(`[Device Check] Desktop detected, assuming ${platform} is accessible`);
+      return true;
+    }
+  } catch (error) {
+    console.error(`Error checking if ${platform} app is installed:`, error);
+    return false;
+  }
+}
+
+// This function handles login to social media platforms with app detection
 // and returns account data for the specific user
 export async function loginToSocialPlatform(
   platform: SocialPlatform, 
-  credentials: SocialCredentials
+  credentials?: SocialCredentials
 ): Promise<SocialAuthState> {
   try {
-    // In a real application, this would make API calls to the social platform's API
-    // For now, we'll simulate a successful login with mock data based on the username
+    console.log(`Attempting to login to ${platform}...`);
     
-    // Simulate network request
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Check if the app is installed
+    const isAppInstalled = await checkAppInstalled(platform);
     
-    // For demo purposes, if the password is "error", throw an error
-    if (credentials.password === "error") {
-      throw new Error(`Authentication failed for ${platform}`);
+    if (isAppInstalled) {
+      // If app is installed, simulate opening the app and getting auth via deep link
+      console.log(`${platform} app detected! Attempting direct authentication...`);
+      
+      // Simulate app authorization process
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // In a real implementation, we would:
+      // 1. Open the app via deep link with an auth request
+      // 2. App would handle auth and redirect back to our app with token
+      // 3. We would parse the token and create session
+      
+      // For demo, generate a username based on platform or use the one provided
+      const username = credentials?.username || `user_${platform}_${Math.floor(Math.random() * 10000)}`;
+      
+      // Create auth state for the connected account via app
+      const authState: SocialAuthState = {
+        platform,
+        accessToken: `app-token-${platform}-${Date.now()}`,
+        refreshToken: `app-refresh-${platform}-${Date.now()}`,
+        expiresAt: Date.now() + 3600000, // 1 hour from now
+        connected: true,
+        username: username,
+        profileUrl: `https://${platform}.com/${username}`,
+        connectedVia: 'app'
+      };
+      
+      // Store the auth state in localStorage for persistence
+      const allPlatforms = JSON.parse(localStorage.getItem('socialPlatforms') || '{}');
+      allPlatforms[platform] = authState;
+      localStorage.setItem('socialPlatforms', JSON.stringify(allPlatforms));
+      
+      return authState;
+    } else {
+      // If app is not installed, fall back to traditional login
+      console.log(`${platform} app not detected. Using manual authentication...`);
+      
+      // Ensure credentials exist for manual login
+      if (!credentials) {
+        throw new Error(`No credentials provided and ${platform} app not detected`);
+      }
+      
+      // Simulate network request
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // For demo purposes, if the password is "error", throw an error
+      if (credentials.password === "error") {
+        throw new Error(`Authentication failed for ${platform}`);
+      }
+      
+      // Create a social auth state object for the connected account
+      const authState: SocialAuthState = {
+        platform,
+        accessToken: `manual-token-${platform}-${Date.now()}`,
+        refreshToken: `manual-refresh-${platform}-${Date.now()}`,
+        expiresAt: Date.now() + 3600000, // 1 hour from now
+        connected: true,
+        username: credentials.username,
+        profileUrl: `https://${platform}.com/${credentials.username}`,
+        connectedVia: 'manual'
+      };
+      
+      // Store the auth state in localStorage for persistence
+      const allPlatforms = JSON.parse(localStorage.getItem('socialPlatforms') || '{}');
+      allPlatforms[platform] = authState;
+      localStorage.setItem('socialPlatforms', JSON.stringify(allPlatforms));
+      
+      return authState;
     }
-    
-    // Create a social auth state object for the connected account
-    const authState: SocialAuthState = {
-      platform,
-      accessToken: `mock-token-${platform}-${Date.now()}`,
-      refreshToken: `mock-refresh-${platform}-${Date.now()}`,
-      expiresAt: Date.now() + 3600000, // 1 hour from now
-      connected: true,
-      username: credentials.username,
-      profileUrl: `https://${platform}.com/${credentials.username}`,
-    };
-    
-    // Store the auth state in localStorage for persistence
-    const allPlatforms = JSON.parse(localStorage.getItem('socialPlatforms') || '{}');
-    allPlatforms[platform] = authState;
-    localStorage.setItem('socialPlatforms', JSON.stringify(allPlatforms));
-    
-    return authState;
   } catch (error) {
     console.error(`Error logging into ${platform}:`, error);
     throw error;

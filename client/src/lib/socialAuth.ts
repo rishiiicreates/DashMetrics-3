@@ -13,6 +13,7 @@ export interface SocialAuthState {
   username?: string;
   profileUrl?: string;
   error?: string;
+  connectedVia?: 'app' | 'manual' | 'oauth';
 }
 
 // Social API connection interfaces
@@ -113,7 +114,8 @@ export const connectSocialPlatform = async (platform: SocialPlatform): Promise<S
     expiresAt: now + 3600000, // 1 hour from now
     connected: true,
     username: `user_${platform}`,
-    profileUrl: `https://${platform}.com/user_profile`
+    profileUrl: `https://${platform}.com/user_profile`,
+    connectedVia: 'oauth'
   };
   
   // Update and save the state
